@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Confirmação de presença</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Nunito+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F5F6F3; --surface:#FFFFFF; --ink:#1E2A2D; --muted:#5E6B6A;
+  --line:#D8DDD8; --accent:#2E5B4F; --accent-ink:#FFFFFF; --blush:#EBD8D3;
+  --danger:#9B3B34; --ok:#2E5B4F; --warn:#8A6A1F;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:'Nunito Sans',system-ui,sans-serif;font-size:17px;line-height:1.5}
+h1,h2,h3{font-family:'Cormorant Garamond',Georgia,serif;font-weight:600;line-height:1.15;margin:0}
+button,input,select{font:inherit}
+.wrap{max-width:560px;margin:0 auto;padding:28px 20px 56px}
+.wrap.wide{max-width:1100px}
+.brand{text-align:center;padding:18px 0 26px}
+.brand .casal{font-family:'Cormorant Garamond',Georgia,serif;font-size:2.6rem;font-weight:600;letter-spacing:.01em}
+.brand .sub{color:var(--muted);margin-top:4px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:24px}
+.hello{font-size:1.9rem;margin-bottom:6px}
+.quota{color:var(--muted);margin:0 0 20px}
+.quota strong{color:var(--ink)}
+label{display:block;font-weight:600;font-size:.92rem;margin:0 0 6px}
+input[type=text],input[type=email],input[type=password],input[type=number],select{
+  width:100%;padding:13px 14px;border:1px solid #B9C1BC;border-radius:10px;background:#fff;color:var(--ink)}
+input:focus,select:focus,button:focus-visible,a:focus-visible{outline:3px solid #8DB5A8;outline-offset:1px}
+.row{display:flex;gap:8px;align-items:flex-end;margin-bottom:14px}
+.row .grow{flex:1}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:13px 20px;border-radius:10px;border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink);font-weight:700;cursor:pointer;text-decoration:none}
+.btn:hover{background:#244A40}
+.btn.block{display:flex;width:100%}
+.btn.ghost{background:transparent;color:var(--accent)}
+.btn.ghost:hover{background:#E8EFEC}
+.btn.danger{background:transparent;color:var(--danger);border-color:#D8B5B1}
+.btn.danger:hover{background:#F6E9E7}
+.btn.small{padding:7px 12px;font-size:.88rem;border-radius:8px}
+.btn[disabled]{opacity:.55;cursor:not-allowed}
+.link{background:none;border:0;color:var(--muted);text-decoration:underline;cursor:pointer;padding:10px;display:block;margin:10px auto 0}
+.link:hover{color:var(--danger)}
+.msg{padding:12px 14px;border-radius:10px;margin:0 0 16px;font-size:.96rem}
+.msg.err{background:#F6E9E7;color:var(--danger)}
+.msg.ok{background:#E3EEE9;color:var(--ok)}
+.counter{color:var(--muted);font-size:.9rem;margin:-4px 0 16px}
+.names-list{margin:14px 0 20px;padding:0;list-style:none}
+.names-list li{padding:10px 0;border-bottom:1px solid var(--line)}
+.state-title{font-size:1.9rem;margin-bottom:6px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:18px 0}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.stat b{display:block;font-family:'Cormorant Garamond',Georgia,serif;font-size:2.2rem;line-height:1}
+.stat span{color:var(--muted);font-size:.88rem}
+.stat.main{background:var(--blush);border-color:#DDBFB9}
+.bar{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin:16px 0}
+.bar .f{min-width:150px}
+.tablebox{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:12px}
+table{border-collapse:collapse;width:100%;min-width:760px;font-size:.95rem}
+th,td{padding:10px 12px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{background:#EEF1EE;font-weight:700;font-size:.85rem;color:var(--muted)}
+tr:last-child td{border-bottom:0}
+.tag{display:inline-block;padding:2px 10px;border-radius:99px;font-size:.82rem;font-weight:700}
+.tag.confirmado{background:#DCEBE5;color:var(--ok)}
+.tag.recusado{background:#F3DEDB;color:var(--danger)}
+.tag.pendente{background:#F2EAD3;color:var(--warn)}
+.actions{display:flex;gap:6px;flex-wrap:wrap}
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.hint{color:var(--muted);font-size:.9rem}
+.hidden{display:none!important}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 18px;border-radius:10px;font-size:.95rem;z-index:10}
+@media (max-width:700px){.stats{grid-template-columns:repeat(2,1fr)}.brand .casal{font-size:2.2rem}}
+@media (prefers-reduced-motion:no-preference){.card{animation:in .35s ease-out}@keyframes in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}}
+</style>
+</head>
+<body>
+<div id="app" class="wrap"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+/* ============ CONFIGURAÇÃO (edite aqui) ============ */
+const firebaseConfig = {
+  apiKey: "AIzaSyCSrkcY6-SWpcKKZiArJBX5UQIEG_XB1WY",
+  authDomain: "confirmacao-casamento-41947.firebaseapp.com",
+  projectId: "confirmacao-casamento-41947",
+  storageBucket: "confirmacao-casamento-41947.firebasestorage.app",
+  messagingSenderId: "786356283857",
+  appId: "1:786356283857:web:bf8a2abed074a8b9ac98f0"
+};
+const EVENTO = {
+  casal: "Alyne e Robson",   // aparece no topo da página do convidado
+  subtitulo: "Confirmação de presença"
+};
+// Mensagem do WhatsApp. {nome} e {link} são trocados automaticamente.
+const MENSAGEM = "Olá, {nome}! Estamos muito felizes em convidar você para o nosso casamento. Confirme sua presença pelo link abaixo:\n{link}";
+/* ==================================================== */
+
+const NOIVO = [
+ ["Marilene",1],["Helena e Alessandro",2],["Ana e Alberto",2],["Joci, Amanda e filho",3],["Dona Aparecida e seu Felix",2],
+ ["Dona Silenir",1],["Tiago e Sirlene",2],["Mauro e Esposa",2],["Rafael e Família",4],["Dona Ilza",1],
+ ["Tayana e Benicio",2],["Juliana e namorado",2],["Ana Karoline e namorado",2],["Filhos da Helena",4],["Seu Zeca e Dona Maria",2],
+ ["Reginaldo",1],["Juca e esposa",2],["Vilma, esposo e Edmilson",3],["Rosa e Maique",2],["Aline e Arlam",2],
+ ["Mirian",2],["Hanna e família",4],["Laurizene e Reginaldo e Filho",4],["Cleber e Família",4],["Pacata e esposa",2],
+ ["Seu Spedito e Família",12],["Pedrina e Namorado",4],["Welton e esposa",4],["Francisca, Sara e Esposo",3],["Domigas e Família",8],
+ ["Luiz e netos",4],["Wesley e esposa",2],["Wilson e Esposa",2],["Tales e esposa",2],["Suany, esposo e filha",3],
+ ["Mirene e Filho",2],["Irene e esposo",2],["Deusa e Fabiana",2],["Ediniucia/Elba e família",4],["Elza e Esposo",4],
+ ["Seu Genesio",1],["Seu Antonio",2],["Seu João",2]
+];
+const NOIVA = [
+ ["Talyne e Jairo",2],["Taygla",1],["Ramila e Raick",2],["Samila e Lukinha",2],["Tia Raimundinha e esposo",2],
+ ["Tia Marinete e Padrim Reis e Primas",4],["Pai e Mãe da Noiva",2],["Andressa, Arthur e Luna",3],["Tia Moça",1],["Keule, Namorado, Vitoria e esposo",4],
+ ["Kika, Celson e filhos",4],["Eva e Wagner e Evely",3],["Madrinha Izaura, Natalia e Esposo",3],["Helbe, esposa e filho",3],["Tia Se e família",7],
+ ["Tio Jucelino",1],["Dona Ivoneide e esposo",2],["Adriana e Jaineres e filhos",4],["Juliana, Dayves e filhos",4],["Tia Keyla e Família",3],
+ ["Auricelia e moreno e filhos",4],["Maria, Chico e Filha",3],["Prea e Adriana",2],["Ana Paula e Ana Lara",2],["Mariah e Miguel",2],
+ ["Raiane, tia Paixão e tio Antonio",3],["Wevila",1],["Tia Ana Celia e Tio Doje",2],["Ana Paula, Paulina e Esposo",3],["Aline da Brasgut e família",3],
+ ["Maxciel e esposa",2],["Marcelino e esposa e filhos",3],["Pablo e Patricia",2],["Sebastião e esposa",2],["Sr. Fernandes e Esposa",2],
+ ["Ciane e Jean e filha",3],["Joseane, Eliado e filho",3],["Wagner",1],["Tia Silvana / tio Pereira, Romulo e esposa",4]
+];
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+const $app = document.getElementById('app');
+const params = new URLSearchParams(location.search);
+
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function h(html){const t=document.createElement('template');t.innerHTML=html.trim();return t.content.firstChild;}
+function toast(t){const e=h(`<div class="toast" role="status">${esc(t)}</div>`);document.body.appendChild(e);setTimeout(()=>e.remove(),2200);}
+function brand(){return `<div class="brand"><div class="casal">${esc(EVENTO.casal)}</div><div class="sub">${esc(EVENTO.subtitulo)}</div></div>`;}
+function plural(n,s,p){return n===1?s:p;}
+
+/* ================= PÁGINA DO CONVIDADO ================= */
+async function guestPage(code){
+  $app.innerHTML = brand()+`<div class="card"><p>Carregando seu convite...</p></div>`;
+  let snap;
+  try{ snap = await db.collection('convites').doc(code).get(); }
+  catch(e){ return showError('Não foi possível carregar o convite. Verifique sua internet e abra o link novamente.'); }
+  if(!snap.exists) return showError('Este link de convite não é válido. Confira se você copiou o link completo ou fale com os noivos.');
+  const conv = snap.data();
+  let names = conv.status==='confirmado' && conv.nomes?.length ? [...conv.nomes] : [''];
+  if(conv.cota===1 && !names[0]) names=[''];
+  renderGuest();
+
+  function showError(m){ $app.innerHTML = brand()+`<div class="card"><h2 class="state-title">Convite não encontrado</h2><p>${esc(m)}</p></div>`; }
+
+  function renderGuest(){
+    const answered = conv.status!=='pendente';
+    $app.innerHTML = brand()+`<div class="card" id="card">
+      <h1 class="hello">Olá, ${esc(conv.nome)}!</h1>
+      <p class="quota">${conv.cota===1
+        ? 'Este convite é <strong>individual</strong>. Confirme o seu nome abaixo.'
+        : `Seu convite vale para <strong>${conv.cota} pessoas</strong>, contando com você. Digite o nome de cada uma que vai ao evento.`}</p>
+      ${answered?`<div class="msg ok">${conv.status==='confirmado'?'Você já confirmou presença. Pode alterar os nomes e salvar de novo.':'Você respondeu que não poderá comparecer. Se mudou de ideia, confirme abaixo.'}</div>`:''}
+      <div id="err"></div>
+      <div id="fields"></div>
+      ${conv.cota>1?`<button class="btn ghost block" id="add" type="button"></button><p class="counter" id="count"></p>`:''}
+      <button class="btn block" id="save" type="button">Confirmar presença</button>
+      <button class="link" id="no" type="button">Não poderei comparecer</button>
+    </div>`;
+    drawFields();
+    document.getElementById('save').onclick = save;
+    document.getElementById('no').onclick = decline;
+    const add = document.getElementById('add');
+    if(add) add.onclick = ()=>{ if(names.length<conv.cota){ readFields(); names.push(''); drawFields(); focusLast(); } };
+  }
+
+  function drawFields(){
+    const box = document.getElementById('fields');
+    box.innerHTML = names.map((n,i)=>`
+      <div class="row">
+        <div class="grow">
+          <label for="n${i}">${conv.cota===1?'Seu nome completo':(i===0?'Seu nome completo':`Nome da pessoa ${i+1}`)}</label>
+          <input type="text" id="n${i}" data-i="${i}" maxlength="80" autocomplete="off" value="${esc(n)}">
+        </div>
+        ${i>0?`<button class="btn danger small" type="button" data-rm="${i}" aria-label="Remover pessoa ${i+1}">Remover</button>`:''}
+      </div>`).join('');
+    box.querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{readFields();names.splice(+b.dataset.rm,1);drawFields();});
+    const add=document.getElementById('add'), cnt=document.getElementById('count');
+    if(add){
+      const full = names.length>=conv.cota;
+      add.disabled = full;
+      add.textContent = full?'Todos os lugares preenchidos':'Adicionar mais uma pessoa';
+      cnt.textContent = `${names.length} de ${conv.cota} lugares usados`;
+    }
+  }
+  function readFields(){ document.querySelectorAll('#fields input').forEach(i=>names[+i.dataset.i]=i.value); }
+  function focusLast(){ const all=document.querySelectorAll('#fields input'); all[all.length-1]?.focus(); }
+  function setErr(m){ document.getElementById('err').innerHTML = m?`<div class="msg err" role="alert">${esc(m)}</div>`:''; }
+
+  async function save(){
+    readFields();
+    const clean = names.map(n=>n.trim().replace(/\s+/g,' ')).filter(Boolean);
+    if(clean.length===0) return setErr('Digite pelo menos o seu nome para confirmar.');
+    if(clean.length>conv.cota) return setErr(`Este convite permite no máximo ${conv.cota} ${plural(conv.cota,'pessoa','pessoas')}.`);
+    const lower = clean.map(n=>n.toLowerCase());
+    if(new Set(lower).size!==lower.length) return setErr('Há nomes repetidos na lista. Confira e tente de novo.');
+    await send('confirmado', clean);
+  }
+  async function decline(){
+    if(!confirm('Confirmar que ninguém deste convite poderá comparecer?')) return;
+    await send('recusado', []);
+  }
+  async function send(status, nomes){
+    const btn=document.getElementById('save'); btn.disabled=true; setErr('');
+    try{
+      await db.collection('convites').doc(code).update({status, nomes, respondidoEm: firebase.firestore.FieldValue.serverTimestamp()});
+      conv.status=status; conv.nomes=nomes;
+      renderDone();
+    }catch(e){
+      btn.disabled=false;
+      setErr('Não foi possível salvar. Verifique sua internet e tente de novo.');
+    }
+  }
+  function renderDone(){
+    $app.innerHTML = brand()+`<div class="card">
+      ${conv.status==='confirmado'
+        ? `<h1 class="state-title">Presença confirmada!</h1>
+           <p>Obrigado, ${esc(conv.nome)}. Anotamos ${conv.nomes.length} ${plural(conv.nomes.length,'pessoa','pessoas')}:</p>
+           <ul class="names-list">${conv.nomes.map(n=>`<li>${esc(n)}</li>`).join('')}</ul>`
+        : `<h1 class="state-title">Resposta registrada</h1><p>Sentiremos sua falta, ${esc(conv.nome)}. Obrigado por avisar.</p>`}
+      <button class="btn ghost block" id="edit" type="button">Alterar resposta</button>
+    </div>`;
+    document.getElementById('edit').onclick=()=>{ names = conv.status==='confirmado'?[...conv.nomes]:['']; renderGuest(); };
+  }
+}
+
+/* ================= PAINEL DA NOIVA/NOIVO ================= */
+let unsub=null;
+function adminPage(){
+  auth.onAuthStateChanged(user=>{
+    if(unsub){unsub();unsub=null;}
+    user ? adminPanel(user) : adminLogin();
+  });
+}
+function adminLogin(msg){
+  $app.className='wrap';
+  $app.innerHTML = `<div class="brand"><div class="casal">Painel</div><div class="sub">Acesso restrito</div></div>
+  <div class="card">
+    ${msg?`<div class="msg err" role="alert">${esc(msg)}</div>`:''}
+    <label for="em">E-mail</label><input type="email" id="em" autocomplete="username" style="margin-bottom:14px">
+    <label for="pw">Senha</label><input type="password" id="pw" autocomplete="current-password" style="margin-bottom:18px">
+    <button class="btn block" id="go" type="button">Entrar</button>
+  </div>`;
+  const go=async()=>{
+    try{ await auth.signInWithEmailAndPassword(document.getElementById('em').value.trim(), document.getElementById('pw').value); }
+    catch(e){ adminLogin('E-mail ou senha incorretos.'); }
+  };
+  document.getElementById('go').onclick=go;
+  document.getElementById('pw').onkeydown=e=>{if(e.key==='Enter')go();};
+}
+
+function adminPanel(user){
+  $app.className='wrap wide';
+  let docs=[], filtroLado='todos', filtroStatus='todos', busca='';
+  $app.innerHTML = `
+    <div class="top"><h1 style="font-size:2.2rem">Painel de convidados</h1>
+      <div class="actions"><button class="btn ghost small" id="csv" type="button">Exportar lista confirmada (CSV)</button>
+      <button class="btn ghost small" id="out" type="button">Sair</button></div></div>
+    <div class="stats" id="stats"></div>
+    <div id="seed"></div>
+    <div class="bar">
+      <div class="f"><label for="fs">Lado</label><select id="fs"><option value="todos">Todos</option><option value="noivo">Noivo</option><option value="noiva">Noiva</option></select></div>
+      <div class="f"><label for="fst">Situação</label><select id="fst"><option value="todos">Todas</option><option value="pendente">Aguardando</option><option value="confirmado">Confirmados</option><option value="recusado">Recusados</option></select></div>
+      <div class="f" style="flex:1"><label for="q">Buscar</label><input type="text" id="q" placeholder="Nome do convite"></div>
+      <button class="btn small" id="new" type="button">Novo convite</button>
+    </div>
+    <div class="tablebox"><table><thead><tr><th>Lado</th><th>Convite</th><th>Lugares</th><th>Situação</th><th>Nomes confirmados</th><th>Ações</th></tr></thead><tbody id="rows"></tbody></table></div>
+    <p class="hint">Os links só funcionam depois que o site estiver publicado. Cada link é exclusivo do convite.</p>`;
+
+  document.getElementById('out').onclick=()=>auth.signOut();
+  document.getElementById('fs').onchange=e=>{filtroLado=e.target.value;draw();};
+  document.getElementById('fst').onchange=e=>{filtroStatus=e.target.value;draw();};
+  document.getElementById('q').oninput=e=>{busca=e.target.value.toLowerCase();draw();};
+  document.getElementById('new').onclick=novo;
+  document.getElementById('csv').onclick=exportCsv;
+
+  unsub = db.collection('convites').onSnapshot(s=>{
+    docs = s.docs.map(d=>({id:d.id,...d.data()}));
+    docs.sort((a,b)=> (a.lado===b.lado? a.nome.localeCompare(b.nome,'pt-BR') : a.lado.localeCompare(b.lado)));
+    draw();
+  }, err=>{
+    document.getElementById('rows').innerHTML=`<tr><td colspan="6">Sem permissão para ler os convites. Confira as regras do Firestore e o e-mail do administrador.</td></tr>`;
+  });
+
+  const linkOf=id=>location.origin+location.pathname+'?c='+id;
+  const msgOf=c=>MENSAGEM.replace('{nome}',c.nome).replace('{link}',linkOf(c.id));
+
+  function draw(){
+    // estatísticas (sempre sobre todos os convites)
+    const prev=docs.reduce((a,c)=>a+c.cota,0);
+    const conf=docs.filter(c=>c.status==='confirmado').reduce((a,c)=>a+c.nomes.length,0);
+    const pend=docs.filter(c=>c.status==='pendente').reduce((a,c)=>a+c.cota,0);
+    const nao=prev-conf-pend;
+    const resp=docs.filter(c=>c.status!=='pendente').length;
+    document.getElementById('stats').innerHTML=`
+      <div class="stat main"><b>${conf}</b><span>pessoas confirmadas</span></div>
+      <div class="stat"><b>${pend}</b><span>lugares aguardando resposta</span></div>
+      <div class="stat"><b>${nao}</b><span>não vão (recusas e vagas não usadas)</span></div>
+      <div class="stat"><b>${resp}/${docs.length}</b><span>convites respondidos (previsto: ${prev} lugares)</span></div>`;
+
+    document.getElementById('seed').innerHTML = docs.length===0
+      ? `<div class="card" style="margin-bottom:16px"><p style="margin-top:0">Nenhum convite cadastrado ainda. Posso importar a lista do casamento (${NOIVO.length+NOIVA.length} convites, ${[...NOIVO,...NOIVA].reduce((a,x)=>a+x[1],0)} lugares).</p><button class="btn" id="imp" type="button">Importar lista de convidados</button></div>` : '';
+    const imp=document.getElementById('imp'); if(imp) imp.onclick=importar;
+
+    const list=docs.filter(c=>(filtroLado==='todos'||c.lado===filtroLado)&&(filtroStatus==='todos'||c.status===filtroStatus)&&(!busca||c.nome.toLowerCase().includes(busca)));
+    document.getElementById('rows').innerHTML = list.length? list.map(c=>`
+      <tr>
+        <td>${c.lado==='noivo'?'Noivo':'Noiva'}</td>
+        <td><strong>${esc(c.nome)}</strong></td>
+        <td>${c.cota}</td>
+        <td><span class="tag ${c.status}">${{pendente:'Aguardando',confirmado:'Confirmado',recusado:'Recusou'}[c.status]}</span>${c.status==='confirmado'?` <span class="hint">${c.nomes.length}/${c.cota}</span>`:''}</td>
+        <td>${c.nomes?.length?esc(c.nomes.join(', ')):'<span class="hint">-</span>'}</td>
+        <td><div class="actions">
+          <a class="btn small" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(msgOf(c))}">WhatsApp</a>
+          <button class="btn ghost small" data-act="link" data-id="${c.id}" type="button">Copiar link</button>
+          <button class="btn ghost small" data-act="msg" data-id="${c.id}" type="button">Copiar mensagem</button>
+          <button class="btn ghost small" data-act="cota" data-id="${c.id}" type="button">Editar</button>
+          <button class="btn danger small" data-act="del" data-id="${c.id}" type="button">Excluir</button>
+        </div></td>
+      </tr>`).join('') : `<tr><td colspan="6">Nenhum convite encontrado com esses filtros.</td></tr>`;
+    document.querySelectorAll('[data-act]').forEach(b=>b.onclick=()=>acao(b.dataset.act,b.dataset.id));
+  }
+
+  async function copy(t,ok){ try{await navigator.clipboard.writeText(t);toast(ok);}catch{prompt('Copie manualmente:',t);} }
+
+  async function acao(act,id){
+    const c=docs.find(x=>x.id===id); if(!c) return;
+    if(act==='link') return copy(linkOf(id),'Link copiado');
+    if(act==='msg') return copy(msgOf(c),'Mensagem copiada');
+    if(act==='cota'){
+      const nome=prompt('Nome do convite:',c.nome); if(nome===null) return;
+      const v=prompt('Quantos lugares este convite tem direito?',c.cota); if(v===null) return;
+      const cota=parseInt(v,10);
+      if(!nome.trim()||!(cota>=1&&cota<=50)) return alert('Informe um nome e um número de lugares entre 1 e 50.');
+      const upd={nome:nome.trim(),cota};
+      if(c.status==='confirmado'&&c.nomes.length>cota){ upd.status='pendente'; upd.nomes=[]; alert('A cota ficou menor que o número de nomes confirmados. A resposta foi zerada e o convidado precisará confirmar de novo.'); }
+      return db.collection('convites').doc(id).update(upd);
+    }
+    if(act==='del'){ if(confirm(`Excluir o convite "${c.nome}"? O link deixará de funcionar.`)) return db.collection('convites').doc(id).delete(); }
+  }
+
+  function codigo(){
+    const al='abcdefghjkmnpqrstuvwxyz23456789', b=new Uint8Array(10); crypto.getRandomValues(b);
+    return Array.from(b,x=>al[x%al.length]).join('');
+  }
+  async function importar(){
+    const btn=document.getElementById('imp'); btn.disabled=true; btn.textContent='Importando...';
+    const todos=[...NOIVO.map(x=>['noivo',...x]),...NOIVA.map(x=>['noiva',...x])];
+    for(let i=0;i<todos.length;i+=400){
+      const batch=db.batch();
+      todos.slice(i,i+400).forEach(([lado,nome,cota])=>{
+        batch.set(db.collection('convites').doc(codigo()),{lado,nome,cota,status:'pendente',nomes:[]});
+      });
+      await batch.commit();
+    }
+    toast('Lista importada');
+  }
+  async function novo(){
+    const lado=(prompt('Lado do convite (digite: noivo ou noiva):','noivo')||'').toLowerCase().trim();
+    if(lado!=='noivo'&&lado!=='noiva') return;
+    const nome=prompt('Nome do convite (ex.: Maria e família):'); if(!nome||!nome.trim()) return;
+    const cota=parseInt(prompt('Quantos lugares (contando com a própria pessoa)?','1'),10);
+    if(!(cota>=1&&cota<=50)) return alert('Informe um número de lugares entre 1 e 50.');
+    await db.collection('convites').doc(codigo()).set({lado,nome:nome.trim(),cota,status:'pendente',nomes:[]});
+  }
+  function exportCsv(){
+    const q=v=>'"'+String(v).replace(/"/g,'""')+'"';
+    const linhas=[['Lado','Convite','Nome confirmado']];
+    docs.filter(c=>c.status==='confirmado').forEach(c=>c.nomes.forEach(n=>linhas.push([c.lado==='noivo'?'Noivo':'Noiva',c.nome,n])));
+    const csv='\ufeff'+linhas.map(r=>r.map(q).join(';')).join('\r\n');
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+    a.download='convidados-confirmados.csv'; a.click(); URL.revokeObjectURL(a.href);
+  }
+}
+
+/* ================= ROTEAMENTO ================= */
+if(params.has('painel')) adminPage();
+else if(params.get('c')) guestPage(params.get('c').trim());
+else $app.innerHTML = brand()+`<div class="card"><h2 class="state-title">Use o link do seu convite</h2><p>Para confirmar presença, abra o link individual que você recebeu pelo WhatsApp.</p></div>`;
+</script>
+</body>
+</html>
