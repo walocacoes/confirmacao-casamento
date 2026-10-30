@@ -34,6 +34,10 @@ button,input,select{font:inherit}
 .feed .when{display:block;color:var(--muted);font-size:.82rem}
 .feed .alt{font-weight:700;color:var(--danger)}
 .badge{display:inline-block;background:var(--danger);color:#fff;border-radius:99px;font-family:'Nunito Sans',sans-serif;font-size:.8rem;font-weight:700;padding:2px 10px;vertical-align:middle;margin-left:6px}
+.age{margin-top:10px;max-width:280px}
+.overlay{position:fixed;inset:0;background:rgba(20,30,28,.55);display:flex;align-items:flex-start;justify-content:center;overflow-y:auto;padding:20px;z-index:20}
+.modal{max-width:560px;width:100%;margin:20px 0}
+.kidsbox{margin:0 0 16px;padding:14px 18px}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:24px}
 .hello{font-size:1.9rem;margin-bottom:6px}
 .quota{color:var(--muted);margin:0 0 20px}
@@ -110,6 +114,12 @@ const EVENTO = {
 };
 // Mensagem do WhatsApp. {nome} e {link} são trocados automaticamente.
 const MENSAGEM = "Olá, {nome}! Estamos muito felizes em convidar você para o nosso casamento, no dia 28 de novembro de 2026. Confirme sua presença pelo link abaixo:\n{link}";
+// Faixas de idade das crianças, para o resumo do painel. Ajuste conforme o buffet cobra.
+const FAIXAS_CRIANCA = [
+  {nome:'0 a 5 anos', min:0, max:5},
+  {nome:'6 a 10 anos', min:6, max:10},
+  {nome:'11 a 17 anos', min:11, max:17}
+];
 /* ==================================================== */
 
 const NOIVO = [
@@ -145,6 +155,9 @@ function h(html){const t=document.createElement('template');t.innerHTML=html.tri
 function toast(t){const e=h(`<div class="toast" role="status">${esc(t)}</div>`);document.body.appendChild(e);setTimeout(()=>e.remove(),2200);}
 function brand(){return `<div class="brand">${typeof FOTO!=='undefined'&&FOTO?`<img class="foto" src="${FOTO}" alt="${esc(EVENTO.casal)}">`:''}<div class="casal">${esc(EVENTO.casal)}</div><div class="data">${esc(EVENTO.data)}</div><div class="sub">${esc(EVENTO.subtitulo)}</div></div>`;}
 function plural(n,s,p){return n===1?s:p;}
+function fmtIdade(a){return a===0?'bebê de colo':a+(a===1?' ano':' anos');}
+function rotuloCrianca(k,a){return k?' (criança'+(typeof a==='number'?', '+fmtIdade(a):'')+')':'';}
+function normArr(a,len,pad){return Array.from({length:len},(_,i)=>a&&a[i]!=null?a[i]:pad);}
 
 /* ================= PÁGINA DO CONVIDADO ================= */
 async function guestPage(code){
@@ -154,14 +167,16 @@ async function guestPage(code){
   catch(e){ return showError('Não foi possível carregar o convite. Verifique sua internet e abra o link novamente.'); }
   if(!snap.exists) return showError('Este link de convite não é válido. Confira se você copiou o link completo ou fale com os noivos.');
   const conv = snap.data();
-  let names=[''], kids=[false];
+  let names=[''], kids=[false], ages=[null];
   loadSaved();
   renderGuest();
 
   function loadSaved(){
     if(conv.status==='confirmado' && conv.nomes?.length){
-      names=[...conv.nomes]; kids=names.map((_,i)=>!!(conv.criancas&&conv.criancas[i]));
-    } else { names=['']; kids=[false]; }
+      names=[...conv.nomes];
+      kids=names.map((_,i)=>!!(conv.criancas&&conv.criancas[i]));
+      ages=names.map((_,i)=>{const v=conv.idades&&conv.idades[i];return typeof v==='number'?v:null;});
+    } else { names=['']; kids=[false]; ages=[null]; }
   }
   function showError(m){ $app.innerHTML = brand()+`<div class="card"><h2 class="state-title">Convite não encontrado</h2><p>${esc(m)}</p></div>`; }
 
@@ -171,7 +186,7 @@ async function guestPage(code){
       <h1 class="hello">Olá, ${esc(conv.nome)}!</h1>
       <p class="quota">${conv.cota===1
         ? 'Este convite é <strong>individual</strong>. Confirme o seu nome abaixo.'
-        : `Seu convite vale para <strong>${conv.cota} pessoas</strong>, contando com você. Digite o nome de cada uma que vai ao evento e marque quem for criança.`}</p>
+        : `Seu convite vale para <strong>${conv.cota} pessoas</strong>, contando com você. Digite o nome de cada uma que vai ao evento. Se for criança, marque a caixinha e informe a idade.`}</p>
       ${answered?`<div class="msg ok">${conv.status==='confirmado'?'Você já confirmou presença. Pode alterar os nomes e salvar de novo.':'Você respondeu que não poderá comparecer. Se mudou de ideia, confirme abaixo.'}</div>`:''}
       <div id="err"></div>
       <div id="fields"></div>
@@ -183,7 +198,7 @@ async function guestPage(code){
     document.getElementById('save').onclick = save;
     document.getElementById('no').onclick = decline;
     const add = document.getElementById('add');
-    if(add) add.onclick = ()=>{ if(names.length<conv.cota){ readFields(); names.push(''); kids.push(false); drawFields(); focusLast(); } };
+    if(add) add.onclick = ()=>{ if(names.length<conv.cota){ readFields(); names.push(''); kids.push(false); ages.push(null); drawFields(); focusLast(); } };
   }
 
   function drawFields(){
@@ -194,10 +209,12 @@ async function guestPage(code){
           <label for="n${i}">${conv.cota===1?'Seu nome completo':(i===0?'Seu nome completo':`Nome da pessoa ${i+1}`)}</label>
           <input type="text" id="n${i}" data-i="${i}" maxlength="80" autocomplete="off" value="${esc(n)}">
           <label class="chk"><input type="checkbox" data-k="${i}" ${kids[i]?'checked':''}> Esta pessoa é criança</label>
+          ${kids[i]?`<div class="age"><label for="a${i}">Idade da criança (use 0 para bebê de colo)</label><input type="number" id="a${i}" data-a="${i}" min="0" max="17" inputmode="numeric" value="${ages[i]??''}"></div>`:''}
         </div>
         ${i>0?`<button class="btn danger small" type="button" data-rm="${i}" aria-label="Remover pessoa ${i+1}">Remover</button>`:''}
       </div>`).join('');
-    box.querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{readFields();const i=+b.dataset.rm;names.splice(i,1);kids.splice(i,1);drawFields();});
+    box.querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{readFields();const i=+b.dataset.rm;names.splice(i,1);kids.splice(i,1);ages.splice(i,1);drawFields();});
+    box.querySelectorAll('[data-k]').forEach(c=>c.onchange=()=>{readFields();drawFields();const i=+c.dataset.k;if(kids[i])document.getElementById('a'+i)?.focus();});
     const add=document.getElementById('add'), cnt=document.getElementById('count');
     if(add){
       const full = names.length>=conv.cota;
@@ -209,36 +226,44 @@ async function guestPage(code){
   function readFields(){
     document.querySelectorAll('#fields input[data-i]').forEach(i=>names[+i.dataset.i]=i.value);
     document.querySelectorAll('#fields input[data-k]').forEach(i=>kids[+i.dataset.k]=i.checked);
+    document.querySelectorAll('#fields input[data-a]').forEach(i=>ages[+i.dataset.a]=i.value===''?null:parseInt(i.value,10));
   }
   function focusLast(){ const all=document.querySelectorAll('#fields input[data-i]'); all[all.length-1]?.focus(); }
   function setErr(m){ document.getElementById('err').innerHTML = m?`<div class="msg err" role="alert">${esc(m)}</div>`:''; }
 
   async function save(){
     readFields();
-    const pares = names.map((n,i)=>({n:n.trim().replace(/\s+/g,' '),k:!!kids[i]})).filter(p=>p.n);
+    const pares = names.map((n,i)=>({n:n.trim().replace(/\s+/g,' '),k:!!kids[i],i:kids[i]?ages[i]:null})).filter(p=>p.n);
     if(pares.length===0) return setErr('Digite pelo menos o seu nome para confirmar.');
     if(pares.length>conv.cota) return setErr(`Este convite permite no máximo ${conv.cota} ${plural(conv.cota,'pessoa','pessoas')}.`);
     const lower = pares.map(p=>p.n.toLowerCase());
     if(new Set(lower).size!==lower.length) return setErr('Há nomes repetidos na lista. Confira e tente de novo.');
-    await send('confirmado', pares.map(p=>p.n), pares.map(p=>p.k));
+    for(const p of pares){
+      if(p.k && !(Number.isInteger(p.i) && p.i>=0 && p.i<=17)) return setErr(`Informe a idade de ${p.n} (de 0 a 17 anos, use 0 para bebê de colo).`);
+    }
+    await send('confirmado', pares.map(p=>p.n), pares.map(p=>p.k), pares.map(p=>p.k?p.i:null));
   }
   async function decline(){
     if(!confirm('Confirmar que ninguém deste convite poderá comparecer?')) return;
-    await send('recusado', [], []);
+    await send('recusado', [], [], []);
   }
-  async function send(status, nomes, criancas){
+  async function send(status, nomes, criancas, idades){
     const btn=document.getElementById('save'); btn.disabled=true; setErr('');
-    const antes={status:conv.status, nomes:conv.nomes||[], criancas:conv.criancas||[]};
-    const igual = antes.status===status && JSON.stringify(antes.nomes)===JSON.stringify(nomes) && JSON.stringify(antes.criancas.slice(0,antes.nomes.length))===JSON.stringify(criancas);
+    const antes={status:conv.status, nomes:conv.nomes||[], criancas:conv.criancas||[], idades:conv.idades||[]};
+    const L=antes.nomes.length;
+    const igual = antes.status===status
+      && JSON.stringify(antes.nomes)===JSON.stringify(nomes)
+      && JSON.stringify(normArr(antes.criancas,L,false).map(Boolean))===JSON.stringify(criancas)
+      && JSON.stringify(normArr(antes.idades,L,null))===JSON.stringify(idades);
     if(igual){ renderDone(); return; }
     const tipo = antes.status==='pendente' ? (status==='confirmado'?'confirmou':'recusou') : 'alterou';
     try{
       const ts=firebase.firestore.FieldValue.serverTimestamp();
       const batch=db.batch();
-      batch.update(db.collection('convites').doc(code),{status, nomes, criancas, respondidoEm: ts});
-      batch.set(db.collection('atividades').doc(),{conviteId:code, convite:conv.nome, tipo, nomes, criancas, statusAntes:antes.status, nomesAntes:antes.nomes, em: ts});
+      batch.update(db.collection('convites').doc(code),{status, nomes, criancas, idades, respondidoEm: ts});
+      batch.set(db.collection('atividades').doc(),{conviteId:code, convite:conv.nome, tipo, nomes, criancas, idades, statusAntes:antes.status, nomesAntes:antes.nomes, em: ts});
       await batch.commit();
-      conv.status=status; conv.nomes=nomes; conv.criancas=criancas;
+      conv.status=status; conv.nomes=nomes; conv.criancas=criancas; conv.idades=idades;
       renderDone();
     }catch(e){
       btn.disabled=false;
@@ -250,7 +275,7 @@ async function guestPage(code){
       ${conv.status==='confirmado'
         ? `<h1 class="state-title">Presença confirmada!</h1>
            <p>Obrigado, ${esc(conv.nome)}. Anotamos ${conv.nomes.length} ${plural(conv.nomes.length,'pessoa','pessoas')}:</p>
-           <ul class="names-list">${conv.nomes.map((n,i)=>`<li>${esc(n)}${conv.criancas[i]?' (criança)':''}</li>`).join('')}</ul>`
+           <ul class="names-list">${conv.nomes.map((n,i)=>`<li>${esc(n)}${esc(rotuloCrianca(conv.criancas[i],(conv.idades||[])[i]))}</li>`).join('')}</ul>`
         : `<h1 class="state-title">Resposta registrada</h1><p>Sentiremos sua falta, ${esc(conv.nome)}. Obrigado por avisar.</p>`}
       <button class="btn ghost block" id="edit" type="button">Alterar resposta</button>
     </div>`;
@@ -298,6 +323,7 @@ function adminPanel(user){
       <div class="actions"><span class="hint" style="align-self:center">${esc(user.email||'')}</span><button class="btn ghost small" id="csv" type="button">Exportar lista confirmada (CSV)</button>
       <button class="btn ghost small" id="out" type="button">Sair</button></div></div>
     <div class="stats" id="stats"></div>
+    <div id="kidsbox"></div>
     <div id="seed"></div>
     <section class="card" style="margin:16px 0">
       <div class="top"><h2 style="font-size:1.6rem">Atividade recente<span id="newbadge"></span></h2><button class="btn ghost small" id="seen" type="button">Marcar como vistas</button></div>
@@ -333,18 +359,24 @@ function adminPanel(user){
   const getSeen=()=>{try{return +localStorage.getItem(SEEN_KEY)||0}catch{return 0}};
   const setSeen=v=>{try{localStorage.setItem(SEEN_KEY,String(v))}catch{}};
   const ms=a=>a.em&&a.em.toMillis?a.em.toMillis():Date.now();
-  const fmtNomes=(ns,ks)=>(ns||[]).map((n,i)=>n+(((ks||[])[i])?' (criança)':'')).join(', ');
+  const fmtNomes=(ns,ks,ids)=>(ns||[]).map((n,i)=>n+rotuloCrianca((ks||[])[i],(ids||[])[i])).join(', ');
   const fmtData=t=>t&&t.toDate?t.toDate().toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'agora';
   function descr(a){
     const n=a.nomes||[], ant=a.nomesAntes||[];
-    if(a.tipo==='confirmou') return `confirmou ${n.length} ${n.length===1?'pessoa':'pessoas'}: ${esc(fmtNomes(n,a.criancas))}`;
+    if(a.tipo==='manual'){
+      const quem=esc(a.por||'administrador');
+      if(a.status==='recusado') return `<span class="alt">registrado por ${quem}:</span> não poderá comparecer`;
+      if(a.status==='pendente'||n.length===0) return `<span class="alt">registrado por ${quem}:</span> voltou para aguardando resposta`;
+      return `<span class="alt">registrado por ${quem}:</span> ${n.length} ${n.length===1?'pessoa':'pessoas'}: ${esc(fmtNomes(n,a.criancas,a.idades))}`;
+    }
+    if(a.tipo==='confirmou') return `confirmou ${n.length} ${n.length===1?'pessoa':'pessoas'}: ${esc(fmtNomes(n,a.criancas,a.idades))}`;
     if(a.tipo==='recusou') return 'avisou que não poderá comparecer';
     if(n.length===0) return `<span class="alt">alterou:</span> agora não poderá comparecer (antes: ${esc(ant.join(', '))})`;
-    if(a.statusAntes==='recusado') return `<span class="alt">alterou:</span> tinha recusado e agora confirmou ${n.length} ${n.length===1?'pessoa':'pessoas'}: ${esc(fmtNomes(n,a.criancas))}`;
+    if(a.statusAntes==='recusado') return `<span class="alt">alterou:</span> tinha recusado e agora confirmou ${n.length} ${n.length===1?'pessoa':'pessoas'}: ${esc(fmtNomes(n,a.criancas,a.idades))}`;
     const add=n.filter(x=>!ant.includes(x)), rem=ant.filter(x=>!n.includes(x));
     const partes=[]; if(add.length) partes.push('incluiu '+esc(add.join(', '))); if(rem.length) partes.push('tirou '+esc(rem.join(', ')));
     if(!partes.length) partes.push('mudou a marcação de criança');
-    return `<span class="alt">alterou:</span> ${partes.join('; ')}. Agora: ${esc(fmtNomes(n,a.criancas))}`;
+    return `<span class="alt">alterou:</span> ${partes.join('; ')}. Agora: ${esc(fmtNomes(n,a.criancas,a.idades))}`;
   }
   function drawFeed(){
     const seen=getSeen(), novas=atividades.filter(a=>ms(a)>seen).length;
@@ -369,11 +401,16 @@ function adminPanel(user){
     const nao=prev-conf-pend;
     const resp=docs.filter(c=>c.status!=='pendente').length;
     document.getElementById('stats').innerHTML=`
-      <div class="stat main"><b>${conf}</b><span>pessoas confirmadas (${conf-kidsN} adultos e ${kidsN} ${kidsN===1?'criança':'crianças'})</span></div>
+      <div class="stat main"><b>${conf}</b><span>pessoas confirmadas (${conf-kidsN} ${conf-kidsN===1?'adulto':'adultos'} e ${kidsN} ${kidsN===1?'criança':'crianças'})</span></div>
       <div class="stat"><b>${pend}</b><span>lugares aguardando resposta</span></div>
       <div class="stat"><b>${nao}</b><span>não vão (recusas e vagas não usadas)</span></div>
       <div class="stat"><b>${resp}/${docs.length}</b><span>convites respondidos (previsto: ${prev} lugares)</span></div>`;
 
+    const idadesConf=[]; let semIdade=0;
+    docs.filter(c=>c.status==='confirmado').forEach(c=>c.nomes.forEach((_,i)=>{
+      if((c.criancas||[])[i]){ const v=(c.idades||[])[i]; typeof v==='number'?idadesConf.push(v):semIdade++; }
+    }));
+    document.getElementById('kidsbox').innerHTML = kidsN? `<div class="card kidsbox"><strong>Crianças confirmadas por idade:</strong> ${FAIXAS_CRIANCA.map(f=>`${esc(f.nome)}: <strong>${idadesConf.filter(v=>v>=f.min&&v<=f.max).length}</strong>`).join(' &nbsp;|&nbsp; ')}${semIdade?` &nbsp;|&nbsp; sem idade informada: <strong>${semIdade}</strong>`:''}</div>` : '';
     document.getElementById('seed').innerHTML = docs.length===0
       ? `<div class="card" style="margin-bottom:16px"><p style="margin-top:0">Nenhum convite cadastrado ainda. Posso importar a lista do casamento (${NOIVO.length+NOIVA.length} convites, ${[...NOIVO,...NOIVA].reduce((a,x)=>a+x[1],0)} lugares).</p><button class="btn" id="imp" type="button">Importar lista de convidados</button></div>` : '';
     const imp=document.getElementById('imp'); if(imp) imp.onclick=importar;
@@ -385,9 +422,10 @@ function adminPanel(user){
         <td><strong>${esc(c.nome)}</strong></td>
         <td>${c.cota}</td>
         <td><span class="tag ${c.status}">${{pendente:'Aguardando',confirmado:'Confirmado',recusado:'Recusou'}[c.status]}</span>${c.status==='confirmado'?` <span class="hint">${c.nomes.length}/${c.cota}</span>`:''}${c.respondidoEm?`<div class="hint">${fmtData(c.respondidoEm)}</div>`:''}</td>
-        <td>${c.nomes?.length?esc(c.nomes.map((n,i)=>n+((c.criancas||[])[i]?' (criança)':'')).join(', ')):'<span class="hint">-</span>'}</td>
+        <td>${c.nomes?.length?esc(fmtNomes(c.nomes,c.criancas,c.idades)):'<span class="hint">-</span>'}</td>
         <td><div class="actions">
           <a class="btn small" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(msgOf(c))}">WhatsApp</a>
+          <button class="btn small" data-act="lista" data-id="${c.id}" type="button">Confirmar/editar lista</button>
           <button class="btn ghost small" data-act="link" data-id="${c.id}" type="button">Copiar link</button>
           <button class="btn ghost small" data-act="msg" data-id="${c.id}" type="button">Copiar mensagem</button>
           <button class="btn ghost small" data-act="cota" data-id="${c.id}" type="button">Editar</button>
@@ -403,6 +441,7 @@ function adminPanel(user){
     const c=docs.find(x=>x.id===id); if(!c) return;
     if(act==='link') return copy(linkOf(id),'Link copiado');
     if(act==='msg') return copy(msgOf(c),'Mensagem copiada');
+    if(act==='lista') return abrirEditor(c);
     if(act==='cota'){
       const nome=prompt('Nome do convite:',c.nome); if(nome===null) return;
       const v=prompt('Quantos lugares este convite tem direito?',c.cota); if(v===null) return;
@@ -415,6 +454,75 @@ function adminPanel(user){
     if(act==='del'){ if(confirm(`Excluir o convite "${c.nome}"? O link deixará de funcionar.`)) return db.collection('convites').doc(id).delete(); }
   }
 
+  function abrirEditor(c){
+    let nomes=(c.status==='confirmado'&&c.nomes?.length)?[...c.nomes]:[''];
+    let kids=nomes.map((_,i)=>!!(c.criancas||[])[i]);
+    let ages=nomes.map((_,i)=>{const v=(c.idades||[])[i];return typeof v==='number'?v:null;});
+    const ov=h(`<div class="overlay"><div class="card modal" role="dialog" aria-modal="true" aria-label="Confirmar convite"></div></div>`);
+    document.body.appendChild(ov);
+    const box=ov.querySelector('.modal');
+    const fechar=()=>{ov.remove();document.removeEventListener('keydown',esc_);};
+    const esc_=e=>{if(e.key==='Escape')fechar();};
+    document.addEventListener('keydown',esc_);
+    box.innerHTML=`<h2 style="font-size:1.7rem">${esc(c.nome)}</h2>
+      <p class="quota">${c.cota} ${c.cota===1?'lugar':'lugares'} neste convite. Registre aqui a resposta de quem não consegue confirmar sozinho.</p>
+      <div id="eerr"></div>
+      <label for="est">Situação</label>
+      <select id="est" style="margin-bottom:16px">
+        <option value="confirmado">Confirmado</option>
+        <option value="recusado">Não vai comparecer</option>
+        <option value="pendente">Aguardando resposta</option>
+      </select>
+      <div id="ebody"><div id="elist"></div><button class="btn ghost block" id="eadd" type="button"></button><p class="counter" id="ecnt"></p></div>
+      <div class="actions" style="margin-top:8px"><button class="btn" id="esave" type="button">Salvar</button><button class="btn ghost" id="ecancel" type="button">Cancelar</button></div>`;
+    const sel=box.querySelector('#est'); sel.value=c.status;
+    const setErr=m=>{box.querySelector('#eerr').innerHTML=m?`<div class="msg err" role="alert">${esc(m)}</div>`:'';};
+    function read(){
+      box.querySelectorAll('input[data-i]').forEach(i=>nomes[+i.dataset.i]=i.value);
+      box.querySelectorAll('input[data-k]').forEach(i=>kids[+i.dataset.k]=i.checked);
+      box.querySelectorAll('input[data-a]').forEach(i=>ages[+i.dataset.a]=i.value===''?null:parseInt(i.value,10));
+    }
+    function draw(){
+      box.querySelector('#ebody').classList.toggle('hidden',sel.value!=='confirmado');
+      box.querySelector('#elist').innerHTML=nomes.map((n,i)=>`
+        <div class="row"><div class="grow">
+          <label for="en${i}">Pessoa ${i+1}</label>
+          <input type="text" id="en${i}" data-i="${i}" maxlength="80" autocomplete="off" value="${esc(n)}">
+          <label class="chk"><input type="checkbox" data-k="${i}" ${kids[i]?'checked':''}> Criança</label>
+          ${kids[i]?`<div class="age"><label for="ea${i}">Idade (0 para bebê de colo)</label><input type="number" id="ea${i}" data-a="${i}" min="0" max="17" inputmode="numeric" value="${ages[i]??''}"></div>`:''}
+        </div>${i>0?`<button class="btn danger small" type="button" data-rm="${i}">Remover</button>`:''}</div>`).join('');
+      box.querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{read();const i=+b.dataset.rm;nomes.splice(i,1);kids.splice(i,1);ages.splice(i,1);draw();});
+      box.querySelectorAll('[data-k]').forEach(k=>k.onchange=()=>{read();draw();const i=+k.dataset.k;if(kids[i])box.querySelector('#ea'+i)?.focus();});
+      const add=box.querySelector('#eadd'), full=nomes.length>=c.cota;
+      add.disabled=full; add.textContent=full?'Todos os lugares preenchidos':'Adicionar mais uma pessoa';
+      box.querySelector('#ecnt').textContent=`${nomes.length} de ${c.cota} lugares usados`+(full?'. Para incluir mais gente, aumente os lugares em Editar.':'');
+    }
+    box.querySelector('#eadd').onclick=()=>{ if(nomes.length<c.cota){read();nomes.push('');kids.push(false);ages.push(null);draw();const all=box.querySelectorAll('input[data-i]');all[all.length-1].focus();} };
+    sel.onchange=()=>{read();draw();};
+    box.querySelector('#ecancel').onclick=fechar;
+    ov.addEventListener('mousedown',e=>{if(e.target===ov)fechar();});
+    box.querySelector('#esave').onclick=async()=>{
+      read(); setErr('');
+      const status=sel.value; let pares=[];
+      if(status==='confirmado'){
+        pares=nomes.map((n,i)=>({n:n.trim().replace(/\s+/g,' '),k:!!kids[i],i:kids[i]?ages[i]:null})).filter(p=>p.n);
+        if(!pares.length) return setErr('Digite pelo menos um nome ou mude a situação.');
+        if(pares.length>c.cota) return setErr(`Este convite tem ${c.cota} ${c.cota===1?'lugar':'lugares'}. Aumente em Editar para incluir mais.`);
+        const low=pares.map(p=>p.n.toLowerCase());
+        if(new Set(low).size!==low.length) return setErr('Há nomes repetidos na lista.');
+        for(const p of pares) if(p.k&&!(Number.isInteger(p.i)&&p.i>=0&&p.i<=17)) return setErr(`Informe a idade de ${p.n} (de 0 a 17 anos, use 0 para bebê de colo).`);
+      }
+      const novos=pares.map(p=>p.n), crs=pares.map(p=>p.k), ids=pares.map(p=>p.k?p.i:null);
+      const btn=box.querySelector('#esave'); btn.disabled=true;
+      try{
+        const ts=firebase.firestore.FieldValue.serverTimestamp(), batch=db.batch();
+        batch.update(db.collection('convites').doc(c.id),{status,nomes:novos,criancas:crs,idades:ids,respondidoEm:status==='pendente'?firebase.firestore.FieldValue.delete():ts});
+        batch.set(db.collection('atividades').doc(),{conviteId:c.id,convite:c.nome,tipo:'manual',por:user.email,status,nomes:novos,criancas:crs,idades:ids,statusAntes:c.status,nomesAntes:c.nomes||[],em:ts});
+        await batch.commit(); fechar(); toast('Convite atualizado');
+      }catch(e){ btn.disabled=false; setErr('Não foi possível salvar. Confira a internet e as regras do Firebase.'); }
+    };
+    draw();
+  }
   function codigo(){
     const al='abcdefghjkmnpqrstuvwxyz23456789', b=new Uint8Array(10); crypto.getRandomValues(b);
     return Array.from(b,x=>al[x%al.length]).join('');
@@ -441,8 +549,8 @@ function adminPanel(user){
   }
   function exportCsv(){
     const q=v=>'"'+String(v).replace(/"/g,'""')+'"';
-    const linhas=[['Lado','Convite','Nome confirmado','Adulto ou criança']];
-    docs.filter(c=>c.status==='confirmado').forEach(c=>c.nomes.forEach((n,i)=>linhas.push([c.lado==='noivo'?'Noivo':'Noiva',c.nome,n,(c.criancas||[])[i]?'Criança':'Adulto'])));
+    const linhas=[['Lado','Convite','Nome confirmado','Adulto ou criança','Idade da criança']];
+    docs.filter(c=>c.status==='confirmado').forEach(c=>c.nomes.forEach((n,i)=>linhas.push([c.lado==='noivo'?'Noivo':'Noiva',c.nome,n,(c.criancas||[])[i]?'Criança':'Adulto',(c.criancas||[])[i]&&typeof (c.idades||[])[i]==='number'?fmtIdade(c.idades[i]):''])));
     const csv='\ufeff'+linhas.map(r=>r.map(q).join(';')).join('\r\n');
     const a=document.createElement('a');
     a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
