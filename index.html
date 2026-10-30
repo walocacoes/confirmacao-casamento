@@ -117,8 +117,7 @@ const MENSAGEM = "Olá, {nome}! Estamos muito felizes em convidar você para o n
 // Faixas de idade das crianças, para o resumo do painel. Ajuste conforme o buffet cobra.
 const FAIXAS_CRIANCA = [
   {nome:'0 a 5 anos', min:0, max:5},
-  {nome:'6 a 10 anos', min:6, max:10},
-  {nome:'11 a 17 anos', min:11, max:17}
+  {nome:'6 a 10 anos', min:6, max:10}
 ];
 /* ==================================================== */
 
@@ -186,7 +185,7 @@ async function guestPage(code){
       <h1 class="hello">Olá, ${esc(conv.nome)}!</h1>
       <p class="quota">${conv.cota===1
         ? 'Este convite é <strong>individual</strong>. Confirme o seu nome abaixo.'
-        : `Seu convite vale para <strong>${conv.cota} pessoas</strong>, contando com você. Digite o nome de cada uma que vai ao evento. Se for criança, marque a caixinha e informe a idade.`}</p>
+        : `Seu convite vale para <strong>${conv.cota} pessoas</strong>, contando com você. Digite o nome de cada uma que vai ao evento. Se for criança de até 10 anos, marque a caixinha e informe a idade. A partir de 11 anos, não marque.`}</p>
       ${answered?`<div class="msg ok">${conv.status==='confirmado'?'Você já confirmou presença. Pode alterar os nomes e salvar de novo.':'Você respondeu que não poderá comparecer. Se mudou de ideia, confirme abaixo.'}</div>`:''}
       <div id="err"></div>
       <div id="fields"></div>
@@ -208,8 +207,8 @@ async function guestPage(code){
         <div class="grow">
           <label for="n${i}">${conv.cota===1?'Seu nome completo':(i===0?'Seu nome completo':`Nome da pessoa ${i+1}`)}</label>
           <input type="text" id="n${i}" data-i="${i}" maxlength="80" autocomplete="off" value="${esc(n)}">
-          <label class="chk"><input type="checkbox" data-k="${i}" ${kids[i]?'checked':''}> Esta pessoa é criança</label>
-          ${kids[i]?`<div class="age"><label for="a${i}">Idade da criança (use 0 para bebê de colo)</label><input type="number" id="a${i}" data-a="${i}" min="0" max="17" inputmode="numeric" value="${ages[i]??''}"></div>`:''}
+          <label class="chk"><input type="checkbox" data-k="${i}" ${kids[i]?'checked':''}> Esta pessoa é criança (até 10 anos)</label>
+          ${kids[i]?`<div class="age"><label for="a${i}">Idade da criança (use 0 para bebê de colo)</label><input type="number" id="a${i}" data-a="${i}" min="0" max="10" inputmode="numeric" value="${ages[i]??''}"></div>`:''}
         </div>
         ${i>0?`<button class="btn danger small" type="button" data-rm="${i}" aria-label="Remover pessoa ${i+1}">Remover</button>`:''}
       </div>`).join('');
@@ -239,7 +238,7 @@ async function guestPage(code){
     const lower = pares.map(p=>p.n.toLowerCase());
     if(new Set(lower).size!==lower.length) return setErr('Há nomes repetidos na lista. Confira e tente de novo.');
     for(const p of pares){
-      if(p.k && !(Number.isInteger(p.i) && p.i>=0 && p.i<=17)) return setErr(`Informe a idade de ${p.n} (de 0 a 17 anos, use 0 para bebê de colo).`);
+      if(p.k && !(Number.isInteger(p.i) && p.i>=0 && p.i<=10)) return setErr(`Informe a idade de ${p.n} (de 0 a 10 anos, use 0 para bebê de colo).`);
     }
     await send('confirmado', pares.map(p=>p.n), pares.map(p=>p.k), pares.map(p=>p.k?p.i:null));
   }
@@ -488,8 +487,8 @@ function adminPanel(user){
         <div class="row"><div class="grow">
           <label for="en${i}">Pessoa ${i+1}</label>
           <input type="text" id="en${i}" data-i="${i}" maxlength="80" autocomplete="off" value="${esc(n)}">
-          <label class="chk"><input type="checkbox" data-k="${i}" ${kids[i]?'checked':''}> Criança</label>
-          ${kids[i]?`<div class="age"><label for="ea${i}">Idade (0 para bebê de colo)</label><input type="number" id="ea${i}" data-a="${i}" min="0" max="17" inputmode="numeric" value="${ages[i]??''}"></div>`:''}
+          <label class="chk"><input type="checkbox" data-k="${i}" ${kids[i]?'checked':''}> Criança (até 10 anos)</label>
+          ${kids[i]?`<div class="age"><label for="ea${i}">Idade (0 para bebê de colo)</label><input type="number" id="ea${i}" data-a="${i}" min="0" max="10" inputmode="numeric" value="${ages[i]??''}"></div>`:''}
         </div>${i>0?`<button class="btn danger small" type="button" data-rm="${i}">Remover</button>`:''}</div>`).join('');
       box.querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{read();const i=+b.dataset.rm;nomes.splice(i,1);kids.splice(i,1);ages.splice(i,1);draw();});
       box.querySelectorAll('[data-k]').forEach(k=>k.onchange=()=>{read();draw();const i=+k.dataset.k;if(kids[i])box.querySelector('#ea'+i)?.focus();});
@@ -510,7 +509,7 @@ function adminPanel(user){
         if(pares.length>c.cota) return setErr(`Este convite tem ${c.cota} ${c.cota===1?'lugar':'lugares'}. Aumente em Editar para incluir mais.`);
         const low=pares.map(p=>p.n.toLowerCase());
         if(new Set(low).size!==low.length) return setErr('Há nomes repetidos na lista.');
-        for(const p of pares) if(p.k&&!(Number.isInteger(p.i)&&p.i>=0&&p.i<=17)) return setErr(`Informe a idade de ${p.n} (de 0 a 17 anos, use 0 para bebê de colo).`);
+        for(const p of pares) if(p.k&&!(Number.isInteger(p.i)&&p.i>=0&&p.i<=10)) return setErr(`Informe a idade de ${p.n} (de 0 a 10 anos, use 0 para bebê de colo).`);
       }
       const novos=pares.map(p=>p.n), crs=pares.map(p=>p.k), ids=pares.map(p=>p.k?p.i:null);
       const btn=box.querySelector('#esave'); btn.disabled=true;
